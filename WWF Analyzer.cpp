@@ -85,6 +85,7 @@ bool operator<(const critical_file_owner& cfo1, const critical_file_owner& cfo2)
 
 
 void pause(void);
+string trim(const string str);
 unsigned long analyze(ifstream& file, string directory, string server_name, list<WWF_data>& lst_WWF);
 void summarize(ofstream& report, list<WWF_data>& lst_WWF);
 string get_server_name(string file_name);
@@ -113,7 +114,7 @@ static list<string> lst_critical_substrings; //substrings within the file name t
 
 int main(void){
 
-	cout << "WWF Analyzer" << endl
+    cout << "WWF Analyzer" << endl
 		<< "This program analyzes the world writable files reports" << endl
 		<< "and summarizes the results." << endl << endl;
 
@@ -165,7 +166,7 @@ int main(void){
 		//if the file is a previously generated report, ignore it
 		string cmp1 = server_name;
 		cmp1 += " WWF Details Report.txt";
-		string cmp2 = "WWF Summary Report.txt";
+		const string cmp2 = "WWF Summary Report.txt";
 		if((cmp1.compare(file_data.cFileName) == 0) || (cmp2.compare(file_data.cFileName) == 0)) continue;
 
         //open the file
@@ -230,6 +231,25 @@ void pause(void){
 	cout << "Press enter to continue." << endl;
 	cin.ignore();
 	return;
+}
+
+//remove leading and trailing white space from str
+//e.g. "       Hello World!  " -> "Hello World!"
+string trim(const string str){
+
+    const string whitespaces = " \t\n\r"; //these characters are to be trimmed
+
+    //first non-whitespace
+    size_t first = str.find_first_not_of(whitespaces);
+
+    //the string is all whitespace just return an empty string
+    if(first == string::npos) return "";
+
+    //last non-whitespace
+    size_t last = str.find_last_not_of(whitespaces);
+
+    //return the substring from first to last
+    return str.substr(first, (last - first + 1));
 }
 
 //determine the server name from the given file name
@@ -312,32 +332,28 @@ bool set_prefs(void){
 				}
 			}
 			else if(line.compare(0,2,"i.") == 0){
-				istringstream ss;
-				string val = line.substr(2);
+				string val = trim(line.substr(2));
 
 				if(val != ""){
 					lst_ignored_extensions.push_front(val);
 				}
 			}
 			else if(line.compare(0,2,"i:") == 0){
-				istringstream ss;
-				string val = line.substr(2);
+				string val = trim(line.substr(2));
 
 				if(val != ""){
 					lst_ignored_substrings.push_front(val);
 				}
 			}
 			else if(line.compare(0,2,"c.") == 0){
-				istringstream ss;
-				string val = line.substr(2);
+				string val = trim(line.substr(2));
 
 				if(val != ""){
 					lst_critical_extensions.push_front(val);
 				}
 			}
 			else if(line.compare(0,2,"c:") == 0){
-				istringstream ss;
-				string val = line.substr(2);
+				string val = trim(line.substr(2));
 
 				if(val != ""){
 					lst_critical_substrings.push_front(val);
@@ -496,14 +512,16 @@ unsigned long analyze(ifstream& file, string directory, string server_name, list
 		istringstream ss;
 		ss.str(line);
 		string permissions, owner, file_name, discard;
-		ss >> permissions >> discard >> owner >> discard >> discard >> discard >> discard >> discard >> file_name;
+		ss >> permissions >> discard >> owner >> discard >> discard >> discard >> discard >> discard;
+		//the file name is just the rest of the line
+		file_name = trim(ss.str());
 
 		//only continue to process the line if the line contains valid data
 		//we expect the permissions symbolic notation to be 10 characters long
 		//the first character in permissions must be one of the following:
 		//'-' for regular file, 'd' for directory, or 'l' for link, or b, c, p, s
 		//else, we have an invalid line
-		if(!ss.fail() && (permissions.size() == 10) && (permissions.at(0) == '-'
+		if(!ss.fail() && (file_name != "") && (permissions.size() == 10) && (permissions.at(0) == '-'
 			|| permissions.at(0) == 'd' || permissions.at(0) == 'l'
 			|| permissions.at(0) == 'b' || permissions.at(0) == 'c'
 			|| permissions.at(0) == 'p' || permissions.at(0) == 's')){
