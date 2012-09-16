@@ -114,7 +114,7 @@ static list<string> lst_critical_substrings; //substrings within the file name t
 
 int main(void){
 
-    cout << "WWF Analyzer" << endl
+	cout << "WWF Analyzer" << endl
 		<< "This program analyzes the world writable files reports" << endl
 		<< "and summarizes the results." << endl << endl;
 
@@ -123,7 +123,7 @@ int main(void){
 
 	//these are for finding the files to be analyzed
 	WIN32_FIND_DATA file_data;
-    HANDLE hFind;
+	HANDLE hFind;
 
 	string directory; //the directory where the files are located
 	const string file_name_pattern = "*.*"; //the structure of the file name (we will allow any file name)
@@ -132,7 +132,9 @@ int main(void){
 	do{
 		cout << "Enter the directory containing the files:" << endl;
 
-		getline(cin,directory);
+		do{
+		    getline(cin,directory);
+		} while(directory.empty());
 
 		//add trailing backslash if the user did not
 		if((directory.at(directory.length() - 1) != '\\') && (directory.at(directory.length() - 1) != '/')){
