@@ -516,7 +516,8 @@ unsigned long analyze(ifstream& file, string directory, string server_name, list
 		string permissions, owner, file_name, discard;
 		ss >> permissions >> discard >> owner >> discard >> discard >> discard >> discard >> discard;
 		//the file name is just the rest of the line
-		file_name = trim(ss.str());
+		getline(ss,file_name);
+		file_name = trim(file_name);
 
 		//only continue to process the line if the line contains valid data
 		//we expect the permissions symbolic notation to be 10 characters long
