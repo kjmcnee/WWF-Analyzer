@@ -18,6 +18,7 @@ This program analyzes world writable files reports and summarizes the results.
 #include <iomanip>
 #include <list>
 #include <iterator>
+#include "FileClassifier.h"
 using namespace std;
 
 //stores data about a given owner on a given server
@@ -89,8 +90,6 @@ string trim(const string str);
 unsigned long analyze(ifstream& file, string directory, string server_name, list<WWF_data>& lst_WWF);
 void summarize(ofstream& report, list<WWF_data>& lst_WWF);
 string get_server_name(string file_name);
-bool is_ignored(string file_name);
-bool is_critical(string file_name);
 bool set_prefs(void);
 
 const int COL_WIDTH = 16; //the width of the columns in the reports
@@ -103,13 +102,8 @@ static int HIGH_VOLUME = numeric_limits<int>::max(); //max number of the highest
 
 static unsigned long MAX_CRITICAL = numeric_limits<unsigned long>::max(); //max number of critical files to show (default is unlimited)
 
-//files to ignore
-static list<string> lst_ignored_extensions; //file extensions to ignore
-static list<string> lst_ignored_substrings; //substrings within the file name to ignore
-//critical files
-static list<string> lst_critical_extensions; //file extensions to consider critical
-static list<string> lst_critical_substrings; //substrings within the file name to consider critical
-//
+static FileClassifier ignore_files_classifier;
+static FileClassifier critical_files_classifier;
 
 
 int main(void){
@@ -337,28 +331,28 @@ bool set_prefs(void){
 				string val = trim(line.substr(2));
 
 				if(val != ""){
-					lst_ignored_extensions.push_front(val);
+					ignore_files_classifier.add_extension(val);
 				}
 			}
 			else if(line.compare(0,2,"i:") == 0){
 				string val = trim(line.substr(2));
 
 				if(val != ""){
-					lst_ignored_substrings.push_front(val);
+					ignore_files_classifier.add_substring(val);
 				}
 			}
 			else if(line.compare(0,2,"c.") == 0){
 				string val = trim(line.substr(2));
 
 				if(val != ""){
-					lst_critical_extensions.push_front(val);
+					critical_files_classifier.add_extension(val);
 				}
 			}
 			else if(line.compare(0,2,"c:") == 0){
 				string val = trim(line.substr(2));
 
 				if(val != ""){
-					lst_critical_substrings.push_front(val);
+					critical_files_classifier.add_substring(val);
 				}
 			}
 		}
@@ -426,58 +420,6 @@ bool set_prefs(void){
 	return true;
 }
 
-//returns true if the file is to be ignored
-bool is_ignored(string file_name){
-
-	//for each substring
-	for(list<string>::iterator i = lst_ignored_substrings.begin(); i != lst_ignored_substrings.end(); i++){
-		//if the substring can be found in the file name, then we ignore the file
-		if(file_name.find(*i) != string::npos){
-			return true;
-		}
-	}
-
-	//get the file extension
-	string extension = file_name.substr(file_name.find_last_of("\\/.") + 1);
-
-	//for each file extension to be ignored
-	for(list<string>::iterator i = lst_ignored_extensions.begin(); i != lst_ignored_extensions.end(); i++){
-		//ignore the file if the extensions are the same
-		if(extension.compare(*i) == 0){
-			return true;
-		}
-	}
-
-	//by this point we know that the file is not to be ignored
-	return false;
-}
-
-//returns true if the file is considered critical
-bool is_critical(string file_name){
-
-	//for each substring
-	for(list<string>::iterator i = lst_critical_substrings.begin(); i != lst_critical_substrings.end(); i++){
-		//if the substring can be found in the file name, then it is critical
-		if(file_name.find(*i) != string::npos){
-			return true;
-		}
-	}
-
-	//get the file extension
-	string extension = file_name.substr(file_name.find_last_of("\\/.") + 1);
-
-	//for each file extension to be considered critical
-	for(list<string>::iterator i = lst_critical_extensions.begin(); i != lst_critical_extensions.end(); i++){
-		//the file is critical if the extensions are the same
-		if(extension.compare(*i) == 0){
-			return true;
-		}
-	}
-
-	//by this point we know that the file is not critical
-	return false;
-}
-
 //analyze the file for the given server and store the data in the list of WWFs
 //returns the number of WWFs found
 unsigned long analyze(ifstream& file, string directory, string server_name, list<WWF_data>& lst_WWF){
@@ -530,7 +472,7 @@ unsigned long analyze(ifstream& file, string directory, string server_name, list
 			|| permissions.at(0) == 'p' || permissions.at(0) == 's')){
 			//if the file is world writable then the second last char will be "w", not "-"
 			//also we make sure that the file is not one of the ones to be ignored
-			if((permissions.at(8) == 'w') && (!is_ignored(file_name))){
+			if((permissions.at(8) == 'w') && (!ignore_files_classifier.satisfies(file_name))){
 
 				//stores whether or not we can add an occurrence to an existing owner/server pair
 				bool existing_element = false;
@@ -542,7 +484,7 @@ unsigned long analyze(ifstream& file, string directory, string server_name, list
 						i->count += 1;
 
 						//if the file is critical
-						if(is_critical(file_name)){
+						if(critical_files_classifier.satisfies(file_name)){
 							//count it
 							i->critical += 1;
 							critical_files++;
@@ -569,7 +511,7 @@ unsigned long analyze(ifstream& file, string directory, string server_name, list
 					new_WWF.owner = owner;
 					new_WWF.count = 1;
 
-					if(is_critical(file_name)){
+					if(critical_files_classifier.satisfies(file_name)){
 						new_WWF.critical = 1;
 						critical_files++;
 
