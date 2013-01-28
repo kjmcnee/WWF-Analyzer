@@ -18,72 +18,9 @@ This program analyzes world writable files reports and summarizes the results.
 #include <iomanip>
 #include <list>
 #include <iterator>
+#include "data structs.h"
 #include "FileClassifier.h"
 using namespace std;
-
-//stores data about a given owner on a given server
-struct WWF_data{
-	string owner; //the owner of the WWF
-	string server; //name of the server where the WWF is found
-	unsigned long count; //the number of files
-	unsigned long critical; //the number of files that are critical
-};
-
-//overload > operator for use in sorting
-//ordered by count, then by owner name, then by server name, then by number of critical files
-//.sort(greater<WWF_data>()) to sort descending
-bool operator>(const WWF_data& WWF1, const WWF_data& WWF2){
-	if(WWF1.count != WWF2.count){
-		return (WWF1.count > WWF2.count);
-	}
-	else if(WWF1.owner != WWF2.owner){
-		return (WWF1.owner > WWF2.owner);
-	}
-	else if(WWF1.owner != WWF2.owner){
-		return (WWF1.server > WWF2.server);
-	}
-	else{
-		return (WWF1.critical > WWF2.critical);
-	}
-}
-
-
-//used to sum all of the files for owners/servers to determine which have the most files
-struct occurrences{
-	string entity; //name of the owner/server
-	unsigned long count; //the number of files for the owner/server
-};
-
-//overload > operator for use in sorting
-//ordered by count, then by name
-//.sort(greater<occurrences>()) to sort descending
-bool operator>(const occurrences& occ1, const occurrences& occ2){
-	if(occ1.count != occ2.count){
-		return (occ1.count > occ2.count);
-	}
-	else{
-		return (occ1.entity > occ2.entity);
-	}
-}
-
-//used to store owner/file pairs for critical files
-struct critical_file_owner{
-	string owner; //name of the owner
-	string file; //the critical file
-};
-
-//overload < operator for use in sorting
-//ordered by owner name, then by file name
-bool operator<(const critical_file_owner& cfo1, const critical_file_owner& cfo2){
-	if(cfo1.owner != cfo2.owner){
-		return (cfo1.owner < cfo2.owner);
-	}
-	else{
-		return (cfo1.file < cfo2.file);
-	}
-}
-
-
 
 void pause(void);
 string trim(const string str);
